@@ -16,22 +16,50 @@
 */
 
 #include <iostream>
-#include <format>
-#include <fstream>
-#include <vector>
 #include <string>
 #include <exception>
 
-#include <sodium/core.h>
-#include <sodium/crypto_secretstream_xchacha20poly1305.h>
-#include <sodium/utils.h>
+#include "utilities/exception.h"
+#include "src/encrypt.hpp"
+#include "src/decrypt.hpp"
 
-#include "get_secret_input.h"
+#include "include/cxxopts.hpp"
+#include <sodium/core.h>
 
 int main(int argc, char* argv[]) {
+    cxxopts::Options options("encryptor", "Encrypts or decrypts files");
+
+    std::string input_file = "";
+    std::string output_file = "";
     try {
-        if (argc != 3) {
-            std::cerr << std::format("Usage: {} <input_file> <output_file>", argv[0]) << std::endl;
+        options.add_options()
+            ("e,encrypt", "File to encrypt", cxxopts::value<std::string>())
+            ("d,decrypt", "File to decrypt", cxxopts::value<std::string>())
+            ("o,output", "Output file (optional)", cxxopts::value<std::string>())
+            ("h,help", "Print usage");
+
+        auto result = options.parse(argc, argv);
+
+        if (result.count("h") || argc == 1) {
+            std::cout << options.help();
+            return 0;
+        }
+
+        if (result.count("e") && result.count("d")) {
+            std::cerr << "Error: Cannot use --encrypt (-e) and --decrypt (-d) simultaneously\n" << std::endl;
+            std::cout << options.help();
+            return 1;
+        }
+
+        if (result.count("e")) {
+            input_file = result["e"].as<std::string>();
+        }
+        else if (result.count("d")) {
+            input_file = result["d"].as<std::string>();
+        }
+        else {
+            std::cerr << "Error: You must specify a mode: --encrypt (-e) or --decrypt (-d)\n" << std::endl;
+            std::cout << options.help();
             return 1;
         }
 
@@ -40,87 +68,47 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        // Read from the input plaintext file
-        std::ifstream input_file(argv[1], std::ios::binary);
-        if (!input_file.is_open()) {
-            std::cerr << std::format("Error: Couldn't open input file `{}`", argv[1]) << std::endl;
-            return 1;
+        if (result.count("o")) {
+            output_file = result["o"].as<std::string>();
+        }
+        else {
+            size_t last_dot_pos = input_file.find_last_of('.');
+
+            std::string base_name = "";
+
+            if (last_dot_pos == std::string::npos || last_dot_pos == 0) {
+                // Treat the whole name as the base
+                base_name = input_file;
+            }
+            else {
+                // Get the substring from the start up to the last dot
+                base_name = input_file.substr(0, last_dot_pos);
+            }
+
+            if (result.count("e")) output_file = base_name + ".enc";
+            else output_file = base_name + ".dec";
         }
 
-        // Check the validity of the output file
-        std::ofstream output_file(argv[2], std::ios::binary);
-        if (!output_file.is_open()) {
-            std::cerr << std::format("Error: Couldn't open output file `{}`", argv[2]) << std::endl;
-            return 1;
-        }
-
-        // Ask the user for the secret key
-        std::cout << "Enter the secret key (hex): ";
-        std::string key_hex = get_secret_input();
-
-        if (key_hex.empty()) {
-            std::cerr << "\nError: No key was entered." << std::endl;
-            return 1;
-        }
-
-        unsigned char key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-        // Convert the hex key from the user's input into raw bytes
-        if (sodium_hex2bin(key, sizeof(key), key_hex.c_str(), key_hex.length(), NULL, NULL, NULL) != 0) {
-            std::cerr << "Error: Invalid hex key format." << std::endl;
-            return 1;
-        }
-
-        constexpr size_t CHUNK_SIZE{ 4096 };
-
-        unsigned char header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
-        crypto_secretstream_xchacha20poly1305_state crypto_state;
-
-        // Initialize the stream and get the header
-        crypto_secretstream_xchacha20poly1305_init_push(&crypto_state, header, key);
-
-        // Write the header to the start of the output file
-        output_file.write(reinterpret_cast<const char*>(header), sizeof(header));
-
-        std::vector<unsigned char> plaintext_chunk(CHUNK_SIZE);
-
-        // The ciphertext needs space for the plaintext plus an authentication tag
-        std::vector<unsigned char> ciphertext_chunk(CHUNK_SIZE + crypto_secretstream_xchacha20poly1305_ABYTES);
-        unsigned long long out_len;
-        unsigned char tag;
-
-        // Process the file in chunks
-        do {
-            input_file.read(reinterpret_cast<char*>(plaintext_chunk.data()), CHUNK_SIZE);
-            size_t bytes_read = input_file.gcount();
-
-            tag = input_file.eof() ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : crypto_secretstream_xchacha20poly1305_TAG_MESSAGE;
-
-            crypto_secretstream_xchacha20poly1305_push(
-                &crypto_state,
-                ciphertext_chunk.data(),
-                &out_len,
-                plaintext_chunk.data(),
-                bytes_read,
-                NULL, 0, tag
-            );
-
-            // Write the encrypted chunk to the output file
-            output_file.write(reinterpret_cast<const char*>(ciphertext_chunk.data()), out_len);
-        } while (!input_file.eof());
-
-        input_file.close();
-        output_file.close();
-
-        std::cout << std::format("Successfully encrypted `{}` to `{}`", argv[1], argv[2]) << std::endl;
+        if (result.count("e")) encrypt(input_file, output_file);
+        else if (result.count("d")) decrypt(input_file, output_file);
 
         return 0;
     }
+    catch (const cxxopts::exceptions::exception& e) {
+        std::cerr << "Error parsing arguments: " << e.what() << std::endl;
+        std::cout << options.help();
+        return 1;
+    }
+    catch (const UtilException& e) {
+        std::cerr << "Exception thrown: " << e.what() << "\nThe program will terminate" << std::endl;
+        return 1;
+    }
     catch (const std::exception& e) {
-        std::cerr << "Exception occurred: " << e.what() << "\nProgram will now terminate" << std::endl;
+        std::cerr << "Exception thrown: " << e.what() << "\nThe program will now terminate" << std::endl;
         return 1;
     }
     catch (...) {
-        std::cerr << "Unknown exception occurred\nProgram will now terminate" << std::endl;
+        std::cerr << "Unknown exception thrown\nThe program will now terminate" << std::endl;
         return 1;
     }
 }

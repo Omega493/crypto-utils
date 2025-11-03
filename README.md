@@ -15,59 +15,97 @@ sudo apt update && sudo apt upgrade && sudo apt install build-essentials ninja-b
 
 ### On Windows
 
-These instructions use the MSYS2 environment to provide the `g++` compiler and other build tools.
+These instructions are based on the CMakePresets.json file, which is configured for the Visual Studio C++ (MSVC) compiler.
 
-1.  **Install MSYS2**:
-    * Download and install MSYS2 from the [official website](https://www.msys2.org/).
-    * After installation, open the **MSYS2 UCRT64** terminal.
-    * Update the package database and core packages by running:
-        ```bash
-        pacman -Syu
-        ```
-        You may need to close the terminal and run it again to complete the update. Then run it one more time.
+1. **Install Visual Studio:**
+  * Download and install "Build Tools for Visual Studio" or "Visual Studio Community" from the [Visual Studio website](https://visualstudio.microsoft.com/downloads/).
+  * During installation, select the "Desktop development with C++" workload. This will install the `cl.exe` compiler and CMake.
 
-2.  **Install Build Tools**:
-    * In the **MSYS2 UCRT64** terminal, install the MinGW `g++` toolchain, `git`, `cmake`, and `ninja` with a single command:
-      ```bash
-      pacman -S --needed mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja git
-      ```
-    * Add the path to your MinGW bin folder to the system environment variable (ex. `C:\msys64\ucrt64\bin`).
+2. **Install vcpkg:**
+  * Choose a directory to install `vcpkg`, such as `C:\dev\vcpkg`. Avoid paths with spaces like `Program Files`.
+  * Using Windows Terminal, clone and bootstrap `vcpkg`:
+  ```powershell
+  git clone https://github.com/microsoft/vcpkg.git
+  cd vcpkg
+  .\bootstrap-vcpkg.bat
+  ```
+3. **Install `libsodium`:**
+  Install `libsodium` using the `x64-windows` triplet:
+  ```powershell
+  .\vcpkg.exe install libsodium:x64-windows
+  ```
 
-3.  **Install vcpkg and libsodium**:
-    * Choose a directory to install `vcpkg`, such as `C:\dev\vcpkg`. Avoid paths with spaces like `Program Files`.
-    * From a standard PowerShell or Command Prompt, clone and bootstrap `vcpkg`:
-      ```powershell
-      git clone https://github.com/microsoft/vcpkg.git
-      cd vcpkg
-      .\bootstrap-vcpkg.bat
-      ```
-    * Install `libsodium` using the MinGW triplet. This builds the library for use with the `g++` compiler you installed.
-      ```powershell
-      .\vcpkg.exe install libsodium:x64-mingw-dynamic
-      ```
+4. **Set Environment Variable:**
+  The CMake Presets requires an environment variable `CMAKE_TOOLCHAIN_FILE` to be set. You must set this variable to point to your `vcpkg.cmake` script.
+  In your system environment variables, create a new variable:
+  * Variable name: `CMAKE_TOOLCHAIN_FILE`
+  * Variable value: `[path-to-vcpkg]/scripts/buildsystems/vcpkg.cmake`
+  Restart your terminal session for the new environment variable to take effect.
 
 ## Build Instructions 
 
-1.  **Configure the project:** Navigate to the project directory and run CMake.
-    * On Debian/Ubuntu/Windows:
-      ```bash
-      cmake -B build -G Ninja
+1. **Clone the Repository:**
+  Run the following command in a PowerShell or Windows Terminal session:
+  ```powershell
+  git clone https://github.com/Omega493/crypto-utils.git
+  ```
+
+2. **Set Up Build Environment:**
+  All subsequent commands must be run from a `Developer Command Prompt for VS 2022`. This ensures that the C++ compiler (`cl.exe`), CMake, and Ninja are all available in your terminal's PATH. You can find this in your Start Menu (e.g., "x64 Native Tools Command Prompt for VS 2022").
+
+3. **Configure with CMake:**
+  In the developer command prompt, head to the your `crypto-utils` directory. Run CMake using a preset to generate the build files. This will automatically select the generator (Ninja) and create the correct build directory as defined in `CMakePresets.json`.
+  Choose one of the following presets to configure:
+  * **On Windows:**
+    * To Configure for Debug:
+      ```powershell
+      cmake --preset x64-debug
       ```
-    * If `libsodium` is in a custom location:
+    * To Configure for Release:
+      ```powershell
+      cmake --preset x64-release
+      ```
+    
+  * **On Ubuntu / Debian:**
+    * To Configure for Debug:
       ```bash
-      cmake -B build -G Ninja -D CMAKE_PREFIX_PATH="/path/to/your/install/dir"
+      cmake --preset linux-debug
+      ```
+    * To Configure for Release:
+      ```bash
+      cmake --preset linux-release
       ```
 
-2.  **Compile the program:**
-    Run the following code to compile the program:
-    ```bash
-    cmake --build build
-    ```
-    The final `encryptor` and `decryptor` executables will be located in the `build` directory.
+4. **Build the Project**
+  Compile the project using the build preset that matches the configuration you just set up.
+  * **On Windows:**
+    * If you configured for Debug:
+      ```powershell
+      cmake --build --preset x64-debug
+      ```
+    * If you configured for Release:
+      ```powershell
+      cmake --build --preset x64-release
+      ```
+   
+  * **On Ubuntu / Debian:**
+    * If you configured for Debug:
+      ```bash
+      cmake --build --preset linux-debug
+      ```
+    * To Configure for Release:
+      ```bash
+      cmake --build --preset linux-release
+      ```
+
+5. **Locate the Executable:**
+  The executable will be in the `binaryDir` specified in the preset:
+  * Windows Example: `build/windows/x64-release/encryptor.exe`
+  * Linux Example: `build/linux/linux-debug/encryptor`
 
 ## Usage
 
-The program prompts for a secret key to perform encryption or decryption.
+The program is a single executable named `encryptor`. It uses flags to determine the operation (encrypt or decrypt) and prompts for a secret key.
 
 ### 1\. Get a Secret Key
 
@@ -75,37 +113,62 @@ The program prompts for a secret key to perform encryption or decryption.
     ```bash
     openssl rand -hex 32
     ```
-    This will output a long hexadecimal string. This is your secret key.
+    This will output a long hexadecimal string. This is your secret key. Keep it safe!
 
   * **For Decryption:** You will need the exact same key that was used to encrypt the file.
 
 ### 2\. Run the Program
 
-Execute the compiled program, providing the input file and desired output file as arguments. The program will then prompt you to enter the secret key.
+* Synopsis: `encryptor <-e <input_file> | -d <input_file>> [-o <output_file>] [-h]`
+* Options:
+  * `-e, --encrypt <input_file>`: Specifies the input file to be encrypted
+  * `-d, --decrypt <input_file>`: Specifies the input file to be decrypted
+  * `-o, --output <output_file>`: (Optional) Specifies the path for the output file (if not provided, the output will be `[base_name].enc` or `[base_name].dec`)
+  * `-h, --help`: Show the help message
 
-  * **On Windows:**
-      * To encrypt:
-        ```powershell
-        ./build/encryptor.exe <input_file> <output_file>
-        ```
-      * To decrypt:
-        ```powershell
-        ./build/decryptor.exe <input_file> <output_file>
-        ```
-  * **Everywhere else:**
-      * To encrypt:
-        ```bash
-        ./build/encryptor <input_file> <output_file>
-        ```
-      * To decrypt:
-        ```bash
-        ./build/decryptor <input_file> <output_file>
-        ```
+* Examples:
+  * On Windows:
+  ```powershell
+  # To encrypt a file
+  ./build/windows/x64-release/encryptor.exe -e "my_document.txt" -o "my_document.enc"
 
-After running the command, you will be prompted:
+  # To decrypt a file
+  ./build/windows/x64-release/encryptor.exe -d "my_document.enc" -o "my_document.txt"
 
-```bash
-Enter the secret key (hex):
-```
+  # To encrypt using the default output name (e.g., "secret.txt" -> "secret.enc")
+  ./build/windows/x64-release/encryptor.exe -e "secret.txt"
+  ```
+  * On Ubuntu / Debian:
+  ```bash
+  # To encrypt a file
+  ./build/linux/linux-debug/encryptor -e "my_document.txt" -o "my_document.enc"
 
-Paste or type your key and press **Enter**. The input will be hidden for security. The program will then produce the output file.
+  # To decrypt a file
+  ./build/linux/linux-debug/encryptor -d "my_document.enc" -o "my_document.txt"
+
+  # To encrypt using the default output name (e.g., "secret.txt" -> "secret.enc")
+  ./build/linux/linux-debug/encryptor -e "secret.txt"
+  ```
+
+* After running the command, you will be prompted:
+  ```bash
+  Enter the secret key (hex):
+  ```
+  Paste or type your key and press **Enter**. The input will be hidden for security. The program will then produce the output file.
+
+* On Windows, you can even add the path to the executable to your system environment variables if you wish to call it from anywhere.
+  * Copy the path to the build directory which holds the executable (ex. `E:\Programs\crypto-utils\build\windows\x64-release\`)
+  * Or, you can place the executable to some other directory and copy the path to that directory. **Make sure the executable itself and `libsodium.dll` is present in your custom location. Initially they should be present in the build directory.**
+  * In both the cases, simply add that location to your system's environment paths.
+  * Examples:
+    The examples remain almost the same:
+    ```powershell
+    # To encrypt a file
+    encryptor -e "my_document.txt" -o "my_document.enc"
+
+    # To decrypt a file
+    encryptor -d "my_document.enc" -o "my_document.txt"
+
+    # To encrypt using the default output name (e.g., "secret.txt" -> "secret.enc")
+    encryptor -e "secret.txt"
+    ```
