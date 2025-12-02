@@ -15,22 +15,13 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <iostream>
-#include <string>
-#include <exception>
-
-#include "utilities/exception.h"
-#include "src/encrypt.hpp"
-#include "src/decrypt.hpp"
-
-#include "include/cxxopts.hpp"
-#include <sodium/core.h>
+#include <include/pch.hpp>
 
 int main(int argc, char* argv[]) {
     cxxopts::Options options("encryptor", "Encrypts or decrypts files");
 
-    std::string input_file = "";
-    std::string output_file = "";
+    std::string input_file{};
+    std::string output_file{};
     try {
         options.add_options()
             ("e,encrypt", "File to encrypt", cxxopts::value<std::string>())
@@ -38,7 +29,7 @@ int main(int argc, char* argv[]) {
             ("o,output", "Output file (optional)", cxxopts::value<std::string>())
             ("h,help", "Print usage");
 
-        auto result = options.parse(argc, argv);
+        const auto result = options.parse(argc, argv);
 
         if (result.count("h") || argc == 1) {
             std::cout << options.help();
@@ -51,12 +42,8 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        if (result.count("e")) {
-            input_file = result["e"].as<std::string>();
-        }
-        else if (result.count("d")) {
-            input_file = result["d"].as<std::string>();
-        }
+        if (result.count("e")) input_file = result["e"].as<std::string>();
+        else if (result.count("d")) input_file = result["d"].as<std::string>();
         else {
             std::cerr << "Error: You must specify a mode: --encrypt (-e) or --decrypt (-d)\n" << std::endl;
             std::cout << options.help();
@@ -68,22 +55,14 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        if (result.count("o")) {
-            output_file = result["o"].as<std::string>();
-        }
+        if (result.count("o")) output_file = result["o"].as<std::string>();
         else {
-            size_t last_dot_pos = input_file.find_last_of('.');
+            const size_t last_dot_pos{ input_file.find_last_of('.') };
 
-            std::string base_name = "";
+            std::string base_name{};
 
-            if (last_dot_pos == std::string::npos || last_dot_pos == 0) {
-                // Treat the whole name as the base
-                base_name = input_file;
-            }
-            else {
-                // Get the substring from the start up to the last dot
-                base_name = input_file.substr(0, last_dot_pos);
-            }
+            if (last_dot_pos == std::string::npos || last_dot_pos == 0) base_name = input_file; // Treat the whole name as the base
+            else base_name = input_file.substr(0, last_dot_pos); // Get the substring from the start up to the last dot
 
             if (result.count("e")) output_file = base_name + ".enc";
             else output_file = base_name + ".dec";

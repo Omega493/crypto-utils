@@ -15,29 +15,28 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef PCH_HPP
+#define PCH_HPP
+
 #pragma once
-#include <stdexcept>
 
-/*
- * @brief Base class for custom exceptions
- */
-class UtilException : public std::runtime_error {
-public:
-	using std::runtime_error::runtime_error;
-};
+#include <iostream>
+#include <format>
+#include <fstream>
+#include <vector>
+#include <string>
 
-/*
- * @brief Exception class for symbolizing error in opening a file
- */
-class FileError : public UtilException {
-public:
-	using UtilException::UtilException;
-};
+#include <cstdint>
 
-/*
- * @brief Exception class for symbolizing error in the key
- */
-class KeyError : public UtilException {
-public:
-	using UtilException::UtilException;
-};
+#include <utilities/get_secret_input.hpp>
+#include <utilities/exception.hpp>
+
+#include <src/encrypt.hpp>
+#include <src/decrypt.hpp>
+
+#include <sodium/core.h>
+#include <sodium/crypto_secretstream_xchacha20poly1305.h>
+#include <sodium/utils.h>
+#include <include/cxxopts.hpp>
+
+#endif // PCH_HPP

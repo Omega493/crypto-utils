@@ -9,8 +9,7 @@ This project incorporates code from the following third-party library:
 
 The full text of the license is reproduced below:
 
----
-
+```txt
 Copyright (c) 2013-2025
 
 Frank Denis <j at pureftpd dot org>
@@ -26,8 +25,7 @@ ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
----
+```
 
 ## cxxopts
 - **Author:** Jarryd Beck
@@ -36,8 +34,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 The full text of the license is included in the relevant source file (`include/cxxopts.hpp`) and is also reproduced below:
 
----
-
+```txt
 Copyright (c) 2014-2022 Jarryd Beck
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -57,5 +54,4 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-
----
+```

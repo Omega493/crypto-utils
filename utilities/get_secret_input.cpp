@@ -15,13 +15,10 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <iostream>
-#include <string>
-
-#include "get_secret_input.h"
+#include <include/pch.hpp>
 
 std::string get_secret_input() {
-    std::string secret;
+    std::string secret{};
 
     #if defined(_WIN32)
         HANDLE h_stdin = GetStdHandle(STD_INPUT_HANDLE);

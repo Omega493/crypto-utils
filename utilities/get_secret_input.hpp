@@ -15,13 +15,21 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef DECRYPT_HPP
-#define DECRYPT_HPP
+#ifndef GET_SECRET_HPP
+#define GET_SECRET_HPP
 
 #pragma once
 
-#include <string>
+#include <include/pch.hpp>
 
-void decrypt(const std::string& input_path, const std::string& output_path);
+#if defined (_WIN32)
+    #include <Windows.h>
+    #include <conio.h>
+#else
+    #include <termios.h>
+    #include <unistd.h>
+#endif
 
-#endif // DECRYPT_HPP
+std::string get_secret_input();
+
+#endif

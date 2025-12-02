@@ -15,7 +15,13 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef ENCRYPT_HPP
+#define ENCRYPT_HPP
+
 #pragma once
-#include <string>
+
+#include <include/pch.hpp>
 
 void encrypt(const std::string& input_path, const std::string& output_path);
+
+#endif

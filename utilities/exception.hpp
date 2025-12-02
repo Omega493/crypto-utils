@@ -15,14 +15,35 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <string>
+#ifndef UTIL_EXCEPTION_HPP
+#define UTIL_EXCEPTION_HPP
 
-#if defined (_WIN32)
-    #include <Windows.h>
-    #include <conio.h>
-#else
-    #include <termios.h>
-    #include <unistd.h>
+#pragma once
+
+#include <stdexcept>
+
+/*
+ * @brief Base class for custom exceptions
+ */
+class UtilException : public std::runtime_error {
+public:
+	using std::runtime_error::runtime_error;
+};
+
+/*
+ * @brief Exception class for symbolizing error in opening a file
+ */
+class FileError : public UtilException {
+public:
+	using UtilException::UtilException;
+};
+
+/*
+ * @brief Exception class for symbolizing error in the key
+ */
+class KeyError : public UtilException {
+public:
+	using UtilException::UtilException;
+};
+
 #endif
-
-std::string get_secret_input();
